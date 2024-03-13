@@ -184,41 +184,22 @@ void Maze_Init(int sizeX, int sizeY)
 
 void Maze_Logic(void)
 {
-    // if (IsKeyPressed(KEY_SPACE))
-    // {
-    //     DEBUG_MSG("Maze_Generate() start");
-    //     clock_t t;
-    //     t = clock();
-
-    //     Maze_Generate();
-
-    //     t = clock() - t;
-    //     double time_taken = ((double)t) / CLOCKS_PER_SEC; // in seconds
-
-    //     DEBUG_MSG("Maze_Generate() took %f seconds to execute \n", time_taken);
-    // }
 }
 
 void Maze_Draw(void)
 {
+    // Draw cell background
+    DrawRectangle(0, 0, maze.sizeX * SIZE_BLOCK, maze.sizeY * SIZE_BLOCK, WHITE);
     for (int x = 0; x < maze.sizeX; x++)
     {
         for (int y = 0; y < maze.sizeY; y++)
         {
-            // Draw cell background
-            DrawRectangle(x * SIZE_BLOCK, y * SIZE_BLOCK, SIZE_BLOCK, SIZE_BLOCK, WHITE);
             // Draw cell borders
             if (Maze_GetCell(x, y)->neighbours[DIR_UP] == false)
-                DrawRectangle(x * SIZE_BLOCK, y * SIZE_BLOCK, SIZE_BLOCK, SIZE_BLOCK_BORDER, BLACK);
+                DrawRectangle(x * SIZE_BLOCK, y * SIZE_BLOCK, SIZE_BLOCK + SIZE_BLOCK_BORDER, SIZE_BLOCK_BORDER, BLACK);
 
             if (Maze_GetCell(x, y)->neighbours[DIR_LEFT] == false)
-                DrawRectangle(x * SIZE_BLOCK, y * SIZE_BLOCK, SIZE_BLOCK_BORDER, SIZE_BLOCK, BLACK);
-
-            // if (Maze_GetCell(x, y)->neighbours[DIR_DOWN] == false)
-            //     DrawRectangle(x * SIZE_BLOCK, ((y + 1) * SIZE_BLOCK) - SIZE_BLOCK_BORDER, SIZE_BLOCK, SIZE_BLOCK_BORDER, BLACK);
-
-            // if (Maze_GetCell(x, y)->neighbours[DIR_RIGHT] == false)
-            //     DrawRectangle(((x + 1) * SIZE_BLOCK) - SIZE_BLOCK_BORDER, y * SIZE_BLOCK, SIZE_BLOCK_BORDER, SIZE_BLOCK, BLACK);
+                DrawRectangle(x * SIZE_BLOCK, y * SIZE_BLOCK, SIZE_BLOCK_BORDER, SIZE_BLOCK + SIZE_BLOCK_BORDER, BLACK);
         }
     }
 }
