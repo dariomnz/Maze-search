@@ -9,6 +9,7 @@ float maze_async_vel = 0.1f;
 float maze_width = MAZE_WIDTH;
 float maze_height = MAZE_HEIGHT;
 bool maze_async = true;
+int maze_search_type = 0;
 Font font;
 RenderTexture textureGUI;
 Rectangle GUI_rect;
@@ -62,6 +63,12 @@ void GUI_Draw(void)
     GuiSliderBar((Rectangle){x + 15, y += h, w = 70, h = 15}, "10", "200", &maze_width, 10, 200);
     GuiSliderBar((Rectangle){x + 15, y += h, w = 70, h = 15}, "10", "200", &maze_height, 10, 200);
     GuiCheckBox((Rectangle){x + 15, y += h, w = 20, h = 20}, "Async", &maze_async);
+
+    GuiComboBox((Rectangle){x, y += h, w = 100, h = 30}, "Amplitude;Depth", &maze_search_type);
+    if (GuiButton((Rectangle){x, y += h, w = 100, h = 30}, "Resolve maze"))
+    {
+        Maze_Resolve(maze_search_type + 1);
+    }
 }
 
 void GUI_Close(void)
