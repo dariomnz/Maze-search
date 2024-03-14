@@ -4,10 +4,14 @@
 #include "stdlib.h"
 #include "string.h"
 #include <time.h>
+#include "raymath.h"
+#include "GUI.h"
 
 Maze maze = {0};
 Darray_Cell stack = {0};
-float MAZE_ASYNC_VEL = 0.1f;
+float MAZE_ASYNC_VEL = 0.001f;
+Camera2D camera = {0};
+Vector2 prevMousePos = {0};
 
 int Maze_GetMAZE_ASYNC_VEL()
 {
@@ -26,6 +30,21 @@ Cell *Maze_GetCell(int x, int y)
     if (y < 0 || y >= maze.sizeY)
         DEBUG_ERROR("Maze y (%d) out of limits (%d)", y, maze.sizeY);
     return &maze.data[x * maze.sizeY + y];
+}
+
+Cell *Maze_GetCellWorld(int x, int y)
+{
+    if (x < 0 || x >= maze.sizeX * SIZE_BLOCK)
+    {
+        // DEBUG_ERROR("Maze x world (%d) out of limits (%d)", x, maze.sizeX * SIZE_BLOCK);
+        return NULL;
+    }
+    if (y < 0 || y >= maze.sizeY * SIZE_BLOCK)
+    {
+        // DEBUG_ERROR("Maze y world (%d) out of limits (%d)", y, maze.sizeY * SIZE_BLOCK);
+        return NULL;
+    }
+    return &maze.data[x / SIZE_BLOCK * maze.sizeY + y / SIZE_BLOCK];
 }
 
 bool Maze_AnyNeighbour(int x, int y)
@@ -165,8 +184,7 @@ void Maze_Generate_async(void)
     {
         is_generate = false;
 
-        t = clock() - t;
-        double time_taken = ((double)t) / CLOCKS_PER_SEC; // in seconds
+        double time_taken = ((double)(clock() - t)) / CLOCKS_PER_SEC; // in seconds
         DEBUG_MSG("Maze_Generate() took %f seconds to execute", time_taken);
     }
 }
@@ -177,8 +195,7 @@ void Maze_Generate(bool async)
     // Reset
     Maze_Reset();
 
-    Cell *cell, *chosen_cell;
-    DIRECTION dir;
+    Cell *cell;
     int x = rand() % maze.sizeX;
     int y = rand() % maze.sizeY;
     cell = Maze_GetCell(x, y);
@@ -186,35 +203,13 @@ void Maze_Generate(bool async)
     DArray_clear(&stack);
     DArray_append(&stack, cell);
     t = clock();
+    is_generate = true;
     if (!async)
     {
         while (stack.count > 0)
         {
-            // Pop cell
-            cell = stack.items[stack.count - 1];
-            DArray_remove(&stack, stack.count - 1);
-
-            // Check neighbours
-            dir = Maze_GetRandUnvisitedNeighbour(cell->x, cell->y);
-            if (dir != DIR_SIZE)
-            {
-                // Push cell
-                DArray_append(&stack, cell);
-                // Choose one
-                Maze_SetNeighbor(cell->x, cell->y, dir, true);
-                chosen_cell = Maze_GetNeighbour(cell->x, cell->y, dir);
-                chosen_cell->visited = true;
-                DArray_append(&stack, chosen_cell);
-                chosen_cell->red = 255;
-            }
+            Maze_Generate_async();
         }
-        t = clock() - t;
-        double time_taken = ((double)t) / CLOCKS_PER_SEC; // in seconds
-        DEBUG_MSG("Maze_Generate() took %f seconds to execute", time_taken);
-    }
-    else
-    {
-        is_generate = true;
     }
 }
 
@@ -243,15 +238,55 @@ void Maze_Init(int sizeX, int sizeY)
             cell->y = y;
         }
     }
+
+    if (FloatEquals(0.0f, camera.zoom))
+        camera.zoom = 1;
+    camera.offset.x = GetScreenWidth() / 2.0f;
+    camera.offset.y = GetScreenHeight() / 2.0f;
+
+    is_generate = false;
 }
 
 void Maze_Logic(void)
 {
     Maze_Generate_async();
+    if (!GUI_MouseInGUI())
+    {
+        // Camera logic
+        float mouseDelta = GetMouseWheelMove();
+        if (mouseDelta != 0)
+        {
+            float newZoom = camera.zoom + camera.zoom * mouseDelta * 0.2f;
+            if (newZoom <= 0)
+                newZoom = 0.01f;
+            camera.zoom = newZoom;
+        }
+
+        Vector2 thisPos = GetMousePosition();
+
+        Vector2 delta = Vector2Subtract(prevMousePos, thisPos);
+        prevMousePos = thisPos;
+
+        if (IsMouseButtonDown(0))
+        {
+            camera.target = GetScreenToWorld2D(Vector2Add(camera.offset, delta), camera);
+        }
+        if (IsMouseButtonPressed(1))
+        {
+            Vector2 clicked = GetScreenToWorld2D(GetMousePosition(), camera);
+            Cell *cell = Maze_GetCellWorld(clicked.x, clicked.y);
+            if (cell != NULL)
+            {
+                DEBUG_MSG("%d:%d", cell->x, cell->y);
+                cell->red = 255;
+            }
+        }
+    }
 }
 
 void Maze_Draw(void)
 {
+    BeginMode2D(camera);
     // Draw cell background
     Cell *cell;
     DrawRectangle(0, 0, maze.sizeX * SIZE_BLOCK, maze.sizeY * SIZE_BLOCK, WHITE);
@@ -261,10 +296,10 @@ void Maze_Draw(void)
         {
             cell = Maze_GetCell(x, y);
 
-            if (cell->red > MAZE_ASYNC_VEL)
+            if (cell->red > MAZE_ASYNC_VEL * 1000)
             {
                 DrawRectangle(x * SIZE_BLOCK, y * SIZE_BLOCK, SIZE_BLOCK, SIZE_BLOCK, (Color){255, 0, 0, cell->red});
-                cell->red -= MAZE_ASYNC_VEL;
+                cell->red -= MAZE_ASYNC_VEL * 1000;
             }
             // Draw cell borders
             if (cell->neighbours[DIR_UP] == false)
@@ -274,6 +309,8 @@ void Maze_Draw(void)
                 DrawRectangle(x * SIZE_BLOCK, y * SIZE_BLOCK, SIZE_BLOCK_BORDER, SIZE_BLOCK + SIZE_BLOCK_BORDER, BLACK);
         }
     }
+
+    EndMode2D();
 }
 
 void Maze_Close(void)
