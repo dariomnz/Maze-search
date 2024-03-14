@@ -6,6 +6,7 @@
 #include <time.h>
 
 Maze maze = {0};
+Darray_Cell stack = {0};
 
 Cell *Maze_GetCell(int x, int y)
 {
@@ -113,23 +114,19 @@ void Maze_Reset(void)
     }
 }
 
-void Maze_Generate(void)
+bool is_generate = false;
+clock_t t;
+void Maze_Generate_async(void)
 {
-    DEBUG_MSG("Maze_Generate() started");
-    clock_t t;
-    t = clock();
-    // Reset
-    Maze_Reset();
+    if (!is_generate)
+    {
+        t = clock();
+        return;
+    }
 
-    Darray_Cell stack = {0};
     Cell *cell, *chosen_cell;
     DIRECTION dir;
-    int x = rand() % maze.sizeX;
-    int y = rand() % maze.sizeY;
-    cell = Maze_GetCell(x, y);
-    cell->visited = true;
-    DArray_append(&stack, cell);
-    while (stack.count > 0)
+    for (int i = 0; i < MAZE_ASYNC_VEL && stack.count > 0; i++)
     {
         // Pop cell
         cell = stack.items[stack.count - 1];
@@ -148,11 +145,59 @@ void Maze_Generate(void)
             DArray_append(&stack, chosen_cell);
         }
     }
-    DArray_free(&stack);
+    if (stack.count <= 0)
+    {
+        is_generate = false;
 
-    t = clock() - t;
-    double time_taken = ((double)t) / CLOCKS_PER_SEC; // in seconds
-    DEBUG_MSG("Maze_Generate() took %f seconds to execute", time_taken);
+        t = clock() - t;
+        double time_taken = ((double)t) / CLOCKS_PER_SEC; // in seconds
+        DEBUG_MSG("Maze_Generate() took %f seconds to execute", time_taken);
+    }
+}
+void Maze_Generate(bool async)
+{
+    DEBUG_MSG("Maze_Generate() started");
+
+    // Reset
+    Maze_Reset();
+
+    Cell *cell, *chosen_cell;
+    DIRECTION dir;
+    int x = rand() % maze.sizeX;
+    int y = rand() % maze.sizeY;
+    cell = Maze_GetCell(x, y);
+    cell->visited = true;
+    DArray_append(&stack, cell);
+    if (!async)
+    {
+        t = clock();
+        while (stack.count > 0)
+        {
+            // Pop cell
+            cell = stack.items[stack.count - 1];
+            DArray_remove(&stack, stack.count - 1);
+
+            // Check neighbours
+            dir = Maze_GetRandUnvisitedNeighbour(cell->x, cell->y);
+            if (dir != DIR_SIZE)
+            {
+                // Push cell
+                DArray_append(&stack, cell);
+                // Choose one
+                Maze_SetNeighbor(cell->x, cell->y, dir, true);
+                chosen_cell = Maze_GetNeighbour(cell->x, cell->y, dir);
+                chosen_cell->visited = true;
+                DArray_append(&stack, chosen_cell);
+            }
+        }
+        t = clock() - t;
+        double time_taken = ((double)t) / CLOCKS_PER_SEC; // in seconds
+        DEBUG_MSG("Maze_Generate() took %f seconds to execute", time_taken);
+    }
+    else
+    {
+        is_generate = true;
+    }
 }
 
 void Maze_Init(int sizeX, int sizeY)
@@ -184,6 +229,7 @@ void Maze_Init(int sizeX, int sizeY)
 
 void Maze_Logic(void)
 {
+    Maze_Generate_async();
 }
 
 void Maze_Draw(void)
@@ -209,4 +255,5 @@ void Maze_Close(void)
     free(maze.data);
     maze.sizeX = 0;
     maze.sizeY = 0;
+    DArray_free(&stack);
 }

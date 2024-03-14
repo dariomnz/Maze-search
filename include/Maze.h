@@ -7,6 +7,7 @@
 #define MAZE_Y 100
 #define SIZE_BLOCK 10
 #define SIZE_BLOCK_BORDER 2
+#define MAZE_ASYNC_VEL 5
 
 typedef enum DIRECTION
 {
@@ -39,7 +40,7 @@ typedef struct Maze
     Cell *data; // Array of ints
 } Maze;
 
-void Maze_Generate(void);
+void Maze_Generate(bool async);
 
 void Maze_Init(int sizeX, int sizeY);
 

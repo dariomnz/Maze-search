@@ -57,9 +57,13 @@ void Window_Draw(void)
 
     EndMode2D();
 
-    if (GuiButton((Rectangle){10, 10, 100, 50}, "Generate maze"))
+    if (GuiButton((Rectangle){10, 10, 100, 30}, "Generate maze"))
     {
-        Maze_Generate();
+        Maze_Generate(false);
+    }
+    if (GuiButton((Rectangle){10, 40, 100, 30}, "Generate maze async"))
+    {
+        Maze_Generate(true);
     }
     DrawFPS(0, 0);
 }
