@@ -7,9 +7,24 @@
 
 Maze maze = {0};
 Darray_Cell stack = {0};
+float MAZE_ASYNC_VEL = 0.1f;
+
+int Maze_GetMAZE_ASYNC_VEL()
+{
+    return MAZE_ASYNC_VEL;
+}
+
+void Maze_SetMAZE_ASYNC_VEL(float value)
+{
+    MAZE_ASYNC_VEL = value;
+}
 
 Cell *Maze_GetCell(int x, int y)
 {
+    if (x < 0 || x >= maze.sizeX)
+        DEBUG_ERROR("Maze x (%d) out of limits (%d)", x, maze.sizeX);
+    if (y < 0 || y >= maze.sizeY)
+        DEBUG_ERROR("Maze y (%d) out of limits (%d)", y, maze.sizeY);
     return &maze.data[x * maze.sizeY + y];
 }
 
@@ -106,6 +121,7 @@ void Maze_Reset(void)
         {
             cell = Maze_GetCell(x, y);
             cell->visited = false;
+            cell->red = 0;
             for (DIRECTION i = 0; i < DIR_SIZE; i++)
             {
                 cell->neighbours[i] = false;
@@ -120,13 +136,12 @@ void Maze_Generate_async(void)
 {
     if (!is_generate)
     {
-        t = clock();
         return;
     }
 
     Cell *cell, *chosen_cell;
     DIRECTION dir;
-    for (int i = 0; i < MAZE_ASYNC_VEL && stack.count > 0; i++)
+    for (int i = 0; i < MAZE_ASYNC_VEL * maze.sizeX * maze.sizeY && stack.count > 0; i++)
     {
         // Pop cell
         cell = stack.items[stack.count - 1];
@@ -143,6 +158,7 @@ void Maze_Generate_async(void)
             chosen_cell = Maze_GetNeighbour(cell->x, cell->y, dir);
             chosen_cell->visited = true;
             DArray_append(&stack, chosen_cell);
+            chosen_cell->red = 255;
         }
     }
     if (stack.count <= 0)
@@ -167,10 +183,11 @@ void Maze_Generate(bool async)
     int y = rand() % maze.sizeY;
     cell = Maze_GetCell(x, y);
     cell->visited = true;
+    DArray_clear(&stack);
     DArray_append(&stack, cell);
+    t = clock();
     if (!async)
     {
-        t = clock();
         while (stack.count > 0)
         {
             // Pop cell
@@ -188,6 +205,7 @@ void Maze_Generate(bool async)
                 chosen_cell = Maze_GetNeighbour(cell->x, cell->y, dir);
                 chosen_cell->visited = true;
                 DArray_append(&stack, chosen_cell);
+                chosen_cell->red = 255;
             }
         }
         t = clock() - t;
@@ -205,10 +223,10 @@ void Maze_Init(int sizeX, int sizeY)
     int data_size = sizeX * sizeY * sizeof(Cell);
     maze.sizeX = sizeX;
     maze.sizeY = sizeY;
-    maze.data = malloc(data_size);
+    maze.data = realloc(maze.data, data_size);
     if (maze.data == NULL)
     {
-        DEBUG_ERROR("Malloc of size: %d", data_size);
+        DEBUG_ERROR("realloc of size: %d", data_size);
         exit(1);
     }
     // Set neighbours to false
@@ -235,16 +253,24 @@ void Maze_Logic(void)
 void Maze_Draw(void)
 {
     // Draw cell background
+    Cell *cell;
     DrawRectangle(0, 0, maze.sizeX * SIZE_BLOCK, maze.sizeY * SIZE_BLOCK, WHITE);
     for (int x = 0; x < maze.sizeX; x++)
     {
         for (int y = 0; y < maze.sizeY; y++)
         {
+            cell = Maze_GetCell(x, y);
+
+            if (cell->red > MAZE_ASYNC_VEL)
+            {
+                DrawRectangle(x * SIZE_BLOCK, y * SIZE_BLOCK, SIZE_BLOCK, SIZE_BLOCK, (Color){255, 0, 0, cell->red});
+                cell->red -= MAZE_ASYNC_VEL;
+            }
             // Draw cell borders
-            if (Maze_GetCell(x, y)->neighbours[DIR_UP] == false)
+            if (cell->neighbours[DIR_UP] == false)
                 DrawRectangle(x * SIZE_BLOCK, y * SIZE_BLOCK, SIZE_BLOCK + SIZE_BLOCK_BORDER, SIZE_BLOCK_BORDER, BLACK);
 
-            if (Maze_GetCell(x, y)->neighbours[DIR_LEFT] == false)
+            if (cell->neighbours[DIR_LEFT] == false)
                 DrawRectangle(x * SIZE_BLOCK, y * SIZE_BLOCK, SIZE_BLOCK_BORDER, SIZE_BLOCK + SIZE_BLOCK_BORDER, BLACK);
         }
     }

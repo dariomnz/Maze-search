@@ -3,11 +3,10 @@
 
 #include "raylib.h"
 
-#define MAZE_X 100
-#define MAZE_Y 100
+#define MAZE_WIDTH 20
+#define MAZE_HEIGHT 20
 #define SIZE_BLOCK 10
 #define SIZE_BLOCK_BORDER 2
-#define MAZE_ASYNC_VEL 5
 
 typedef enum DIRECTION
 {
@@ -24,6 +23,7 @@ typedef struct Cell
     int y;
     DIRECTION neighbours[DIR_SIZE];
     bool visited;
+    unsigned char red;
 } Cell;
 
 typedef struct Darray_Cell
@@ -39,6 +39,9 @@ typedef struct Maze
     int sizeY;  // Size of y of array data
     Cell *data; // Array of ints
 } Maze;
+
+int Maze_GetMAZE_ASYNC_VEL();
+void Maze_SetMAZE_ASYNC_VEL(float value);
 
 void Maze_Generate(bool async);
 

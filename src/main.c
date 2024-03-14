@@ -9,7 +9,7 @@ int main(void)
     //--------------------------------------------------------------------------------------
     Window_Init();
 
-    // SetTargetFPS(60);
+    SetTargetFPS(60);
 
     // Main game loop
     while (!WindowShouldClose()) // Detect window close button or ESC key
