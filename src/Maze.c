@@ -284,26 +284,29 @@ void Maze_Resolve_Depth_Async(void)
     DIRECTION dir;
     bool find = false;
     Cell *cell, *chosen_cell;
-    // Pop cell
-    cell = stack.items[stack.count - 1];
-    DArray_remove(&stack, stack.count - 1);
 
-    dir = Maze_GetRandUnvisitedPosibleNeighbour(cell->x, cell->y);
-    if (dir != DIR_SIZE)
+    for (int i = 0; i < MAZE_ASYNC_VEL * maze.sizeX * maze.sizeY && stack.count > 0; i++)
     {
-        // Push cell
-        DArray_append(&stack, cell);
-        // Choose one
-        chosen_cell = Maze_GetNeighbour(cell->x, cell->y, dir);
-        chosen_cell->visited = true;
-        DArray_append(&stack, chosen_cell);
-        chosen_cell->heat = 255;
-        if (Maze_EqualCell(chosen_cell, maze.end_cell))
+        // Pop cell
+        cell = stack.items[stack.count - 1];
+        DArray_remove(&stack, stack.count - 1);
+
+        dir = Maze_GetRandUnvisitedPosibleNeighbour(cell->x, cell->y);
+        if (dir != DIR_SIZE)
         {
-            find = true;
+            // Push cell
+            DArray_append(&stack, cell);
+            // Choose one
+            chosen_cell = Maze_GetNeighbour(cell->x, cell->y, dir);
+            chosen_cell->visited = true;
+            DArray_append(&stack, chosen_cell);
+            chosen_cell->heat = 255;
+            if (Maze_EqualCell(chosen_cell, maze.end_cell))
+            {
+                find = true;
+            }
         }
     }
-
     if (stack.count <= 0 || find == true)
     {
         searching_type = SEARCH_NULL;
@@ -322,26 +325,30 @@ void Maze_Resolve_Depth_Async(void)
 
 void Maze_Resolve_Amplitude_Async(void)
 {
-    // Pop cell
     bool find = false;
     Cell *cell, *chosen_cell;
-    cell = stack.items[0];
-    DArray_remove(&stack, 0);
 
-    for (int i = 0; i < DIR_SIZE; i++)
+    for (int i = 0; i < MAZE_ASYNC_VEL * maze.sizeX * maze.sizeY && stack.count > 0; i++)
     {
-        chosen_cell = Maze_GetNeighbour(cell->x, cell->y, i);
-        if (chosen_cell == NULL || Maze_GetCell(cell->x, cell->y)->neighbours[i] == false)
-            continue;
-        if (!chosen_cell->visited)
+        // Pop cell
+        cell = stack.items[0];
+        DArray_remove(&stack, 0);
+
+        for (int i = 0; i < DIR_SIZE; i++)
         {
-            chosen_cell->path_dir = Maze_OpositeDir(i);
-            chosen_cell->visited = true;
-            DArray_append(&stack, chosen_cell);
-            chosen_cell->heat = 255;
-            if (Maze_EqualCell(chosen_cell, maze.end_cell))
+            chosen_cell = Maze_GetNeighbour(cell->x, cell->y, i);
+            if (chosen_cell == NULL || Maze_GetCell(cell->x, cell->y)->neighbours[i] == false)
+                continue;
+            if (!chosen_cell->visited)
             {
-                find = true;
+                chosen_cell->path_dir = Maze_OpositeDir(i);
+                chosen_cell->visited = true;
+                DArray_append(&stack, chosen_cell);
+                chosen_cell->heat = 255;
+                if (Maze_EqualCell(chosen_cell, maze.end_cell))
+                {
+                    find = true;
+                }
             }
         }
     }
