@@ -4,6 +4,7 @@
 #include "cstring"
 // #include <time.h>
 #include "raymath.h"
+#include "raygui.h"
 #include "GUI.hpp"
 
 Camera2D camera = {0};
@@ -272,6 +273,7 @@ void Maze::Resolve_Depth_Async(void)
         {
             // Push cell
             stack.push_back(cell);
+            cell->path_dir = OpositeDir(dir);
             // Choose one
             chosen_cell = GetNeighbour(cell->x, cell->y, dir);
             chosen_cell->visited = true;
@@ -287,14 +289,15 @@ void Maze::Resolve_Depth_Async(void)
     {
         searching_type = SEARCH_NULL;
         // Mark path
-        for (auto it = stack.begin(); it != stack.end(); ++it)
+        for (int i = 0; i < stack.size(); i++)
         {
-            if (EqualCell(*it, start_cell))
-                (*it)->type = TYPE_START;
-            else if (EqualCell(*it, end_cell))
-                (*it)->type = TYPE_END;
+            Cell *cell = stack[i];
+            if (EqualCell(cell, start_cell))
+                (cell)->type = TYPE_START;
+            else if (EqualCell(cell, end_cell))
+                (cell)->type = TYPE_END;
             else
-                (*it)->type = TYPE_PATH;
+                (cell)->type = TYPE_PATH;
         }
     }
 }
@@ -310,14 +313,14 @@ void Maze::Resolve_Amplitude_Async(void)
         cell = stack.front();
         stack.erase(stack.begin());
 
-        for (int i = 0; i < DIR_SIZE; i++)
+        for (int dir = 0; dir < DIR_SIZE; dir++)
         {
-            chosen_cell = GetNeighbour(cell->x, cell->y, (DIRECTION)i);
-            if (chosen_cell == NULL || GetCell(cell->x, cell->y)->neighbours[i] == false)
+            chosen_cell = GetNeighbour(cell->x, cell->y, (DIRECTION)dir);
+            if (chosen_cell == NULL || GetCell(cell->x, cell->y)->neighbours[dir] == false)
                 continue;
             if (!chosen_cell->visited)
             {
-                chosen_cell->path_dir = OpositeDir((DIRECTION)i);
+                chosen_cell->path_dir = OpositeDir((DIRECTION)dir);
                 chosen_cell->visited = true;
                 stack.push_back(chosen_cell);
                 chosen_cell->heat = 255;
@@ -462,36 +465,61 @@ void Maze::Draw(void)
     BeginMode2D(camera);
     // Draw cell background
     Cell *cell;
+    int x_pos, y_pos, icon_id;
     DrawRectangle(0, 0, sizeX * SIZE_BLOCK, sizeY * SIZE_BLOCK, WHITE);
     for (int x = 0; x < sizeX; x++)
     {
         for (int y = 0; y < sizeY; y++)
         {
             cell = GetCell(x, y);
+            x_pos = x * SIZE_BLOCK;
+            y_pos = y * SIZE_BLOCK;
 
             if (cell->type == TYPE_PATH)
             {
-                DrawRectangle(x * SIZE_BLOCK, y * SIZE_BLOCK, SIZE_BLOCK, SIZE_BLOCK, (Color){0, 255, 255, 200});
+                DrawRectangle(x_pos, y_pos, SIZE_BLOCK, SIZE_BLOCK, (Color){0, 255, 255, 200});
+
+                switch (OpositeDir(cell->path_dir))
+                {
+                case DIR_RIGHT:
+                    icon_id = ICON_ARROW_RIGHT_FILL;
+                    break;
+                case DIR_LEFT:
+                    icon_id = ICON_ARROW_LEFT_FILL;
+                    break;
+                case DIR_UP:
+                    icon_id = ICON_ARROW_UP_FILL;
+                    break;
+                case DIR_DOWN:
+                    icon_id = ICON_ARROW_DOWN_FILL;
+                    break;
+
+                default:
+                    icon_id = -1;
+                    break;
+                }
+                if (icon_id != -1)
+                    GuiDrawIcon(icon_id, x_pos, y_pos, 1, BLACK);
             }
             if (cell->type == TYPE_START)
             {
-                DrawRectangle(x * SIZE_BLOCK, y * SIZE_BLOCK, SIZE_BLOCK, SIZE_BLOCK, (Color){0, 255, 0, 200});
+                DrawRectangle(x_pos, y_pos, SIZE_BLOCK, SIZE_BLOCK, (Color){0, 255, 0, 200});
             }
             if (cell->type == TYPE_END)
             {
-                DrawRectangle(x * SIZE_BLOCK, y * SIZE_BLOCK, SIZE_BLOCK, SIZE_BLOCK, (Color){0, 0, 255, 200});
+                DrawRectangle(x_pos, y_pos, SIZE_BLOCK, SIZE_BLOCK, (Color){0, 0, 255, 200});
             }
             if (cell->heat > async_vel * 1000)
             {
-                DrawRectangle(x * SIZE_BLOCK, y * SIZE_BLOCK, SIZE_BLOCK, SIZE_BLOCK, (Color){255, 0, 0, cell->heat});
+                DrawRectangle(x_pos, y_pos, SIZE_BLOCK, SIZE_BLOCK, (Color){255, 0, 0, cell->heat});
                 cell->heat -= async_vel * 1000;
             }
             // Draw cell borders
             if (cell->neighbours[DIR_UP] == false)
-                DrawRectangle(x * SIZE_BLOCK, y * SIZE_BLOCK, SIZE_BLOCK + SIZE_BLOCK_BORDER, SIZE_BLOCK_BORDER, BLACK);
+                DrawRectangle(x_pos, y_pos, SIZE_BLOCK + SIZE_BLOCK_BORDER, SIZE_BLOCK_BORDER, BLACK);
 
             if (cell->neighbours[DIR_LEFT] == false)
-                DrawRectangle(x * SIZE_BLOCK, y * SIZE_BLOCK, SIZE_BLOCK_BORDER, SIZE_BLOCK + SIZE_BLOCK_BORDER, BLACK);
+                DrawRectangle(x_pos, y_pos, SIZE_BLOCK_BORDER, SIZE_BLOCK + SIZE_BLOCK_BORDER, BLACK);
         }
     }
 

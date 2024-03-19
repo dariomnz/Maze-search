@@ -6,8 +6,8 @@
 
 #define MAZE_WIDTH 20
 #define MAZE_HEIGHT 20
-#define SIZE_BLOCK 10
-#define SIZE_BLOCK_BORDER 2
+#define SIZE_BLOCK 16
+#define SIZE_BLOCK_BORDER 3
 
 typedef enum DIRECTION
 {
@@ -51,11 +51,11 @@ class GUI;
 class Maze
 {
 private:
-    int sizeX;            // Size of x of array data
-    int sizeY;            // Size of y of array data
-    std::vector<Cell> data;// Array of cells
-    Cell *start_cell;     // Pointer to start cell
-    Cell *end_cell;       // Pointer to end cell
+    int sizeX;              // Size of x of array data
+    int sizeY;              // Size of y of array data
+    std::vector<Cell> data; // Array of cells
+    Cell *start_cell;       // Pointer to start cell
+    Cell *end_cell;         // Pointer to end cell
     std::vector<Cell *> stack;
 
 public:
