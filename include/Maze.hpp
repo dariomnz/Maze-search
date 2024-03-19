@@ -53,7 +53,7 @@ class Maze
 private:
     int sizeX;            // Size of x of array data
     int sizeY;            // Size of y of array data
-    Cell *data = nullptr; // Array of ints
+    std::vector<Cell> data;// Array of cells
     Cell *start_cell;     // Pointer to start cell
     Cell *end_cell;       // Pointer to end cell
     std::vector<Cell *> stack;

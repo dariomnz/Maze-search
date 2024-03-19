@@ -396,19 +396,12 @@ Maze::Maze()
 
 void Maze::Rebuild(int sizeX_, int sizeY_)
 {
-    int data_size = sizeX_ * sizeY_ * sizeof(Cell);
     sizeX = sizeX_;
     sizeY = sizeY_;
-    data = (Cell *)realloc(data, data_size);
-    if (data == NULL)
-    {
-        DEBUG_ERROR("realloc of size: " << data_size);
-        exit(1);
-    }
+    data.clear();
+    data.resize(sizeX * sizeY);
     start_cell = NULL;
     end_cell = NULL;
-    // Set neighbours to false
-    std::memset(data, 0, data_size);
 
     // Set x and y
     Cell *cell;
@@ -432,8 +425,8 @@ void Maze::Rebuild(int sizeX_, int sizeY_)
 
 void Maze::Logic(void)
 {
-    Maze::Generate_async();
-    Maze::Resolve_async();
+    Generate_async();
+    Resolve_async();
     if (!gui->MouseInGUI())
     {
         // Camera logic
@@ -458,8 +451,8 @@ void Maze::Logic(void)
         if (IsMouseButtonPressed(1))
         {
             Vector2 clicked = GetScreenToWorld2D(GetMousePosition(), camera);
-            Cell *cell = Maze::GetCellWorld(clicked.x, clicked.y);
-            Maze::SelectStartEnd(cell);
+            Cell *cell = GetCellWorld(clicked.x, clicked.y);
+            SelectStartEnd(cell);
         }
     }
 }
@@ -474,7 +467,7 @@ void Maze::Draw(void)
     {
         for (int y = 0; y < sizeY; y++)
         {
-            cell = Maze::GetCell(x, y);
+            cell = GetCell(x, y);
 
             if (cell->type == TYPE_PATH)
             {
@@ -508,7 +501,6 @@ void Maze::Draw(void)
 Maze::~Maze(void)
 {
     DEBUG_MSG("Unload maze");
-    free(data);
     sizeX = 0;
     sizeY = 0;
 }
