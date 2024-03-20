@@ -17,9 +17,9 @@ file(GLOB all_SRCS
 include_directories(${RAYLIB_DIR}/include)
 find_library(RAYLIB_LIBRARY raylib HINTS ${RAYLIB_DIR}/lib)
 
-# set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
-# set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror")
-# set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror")
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g")
 
 add_executable(${PROJECT_NAME} ${all_SRCS})
 

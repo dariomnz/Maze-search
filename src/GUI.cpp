@@ -60,10 +60,10 @@ void GUI::Draw(void)
 
     sprintf(label_xy, " Width:Height %d:%d", (int)slide_bar_maze_width, (int)slide_bar_maze_height);
     GuiLabel((Rectangle){x - 10, y += h, w = 150, h = 20}, label_xy);
-    GuiSliderBar((Rectangle){x + 15, y += h, w = 70, h = 15}, "10", "200", &slide_bar_maze_width, 10, 200);
-    GuiSliderBar((Rectangle){x + 15, y += h, w = 70, h = 15}, "10", "200", &slide_bar_maze_height, 10, 200);
+    GuiSliderBar((Rectangle){x + 15, y += h, w = 70, h = 15}, "10", "800", &slide_bar_maze_width, 10, 800);
+    GuiSliderBar((Rectangle){x + 15, y += h, w = 70, h = 15}, "10", "800", &slide_bar_maze_height, 10, 800);
     GuiCheckBox((Rectangle){x + 15, y += h, w = 20, h = 20}, "Async", &check_box_maze_async);
-
+        
     GuiComboBox((Rectangle){x, y += h, w = 100, h = 30}, "Amplitude;Depth", &combo_box_maze_search_type);
     if (GuiButton((Rectangle){x, y += h, w = 100, h = 30}, "Resolve maze"))
     {

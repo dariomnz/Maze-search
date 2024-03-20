@@ -7,12 +7,6 @@
 #include "raygui.h"
 #include "GUI.hpp"
 
-Camera2D camera = {0};
-Vector2 prevMousePos = {0};
-bool is_generate = false;
-SEARCH_TYPE searching_type = SEARCH_NULL;
-clock_t t;
-
 bool EqualCell(Cell *cell1, Cell *cell2)
 {
     if (cell1 == NULL || cell2 == NULL)
@@ -31,6 +25,9 @@ Cell *Maze::GetCell(int x, int y)
 
 Cell *Maze::GetCellWorld(int x, int y)
 {
+    if (x < 0 || x > SIZE_BLOCK * sizeX ||
+        y < 0 || y > SIZE_BLOCK * sizeY)
+        return NULL;
     return GetCell(x / SIZE_BLOCK, y / SIZE_BLOCK);
 }
 
@@ -143,12 +140,17 @@ void Maze::Reset(bool reset_neighbours)
         {
             cell = GetCell(x, y);
             cell->visited = false;
+            if (cell->type != TYPE_NULL)
+                cell->update_draw = true;
             cell->type = TYPE_NULL;
             cell->heat = 0;
+            if (cell->heat != 0)
+                cell->update_draw = true;
             if (reset_neighbours)
                 for (int i = 0; i < DIR_SIZE; i++)
                 {
                     cell->neighbours[i] = false;
+                    cell->update_draw = true;
                 }
         }
     }
@@ -181,6 +183,7 @@ void Maze::Generate_async(void)
             chosen_cell->visited = true;
             stack.push_back(chosen_cell);
             chosen_cell->heat = 255;
+            chosen_cell->update_draw = true;
         }
     }
     if (stack.size() <= 0)
@@ -198,6 +201,7 @@ void Maze::Generate_async(void)
             {
                 SetNeighbor(x, y, dir, true);
                 cell->heat = 255;
+                chosen_cell->update_draw = true;
             }
         }
 
@@ -235,6 +239,11 @@ void Maze::SelectStartEnd(Cell *cell)
     if (cell == NULL)
         return;
 
+    cell->update_draw = true;
+    if (start_cell != NULL)
+        start_cell->update_draw = true;
+    if (end_cell != NULL)
+        end_cell->update_draw = true;
     if (start_cell == NULL)
     {
         start_cell = cell;
@@ -254,6 +263,12 @@ void Maze::SelectStartEnd(Cell *cell)
         end_cell->type = TYPE_NULL;
         end_cell = NULL;
     }
+
+    cell->update_draw = true;
+    if (start_cell != NULL)
+        start_cell->update_draw = true;
+    if (end_cell != NULL)
+        end_cell->update_draw = true;
 }
 
 void Maze::Resolve_Depth_Async(void)
@@ -279,6 +294,7 @@ void Maze::Resolve_Depth_Async(void)
             chosen_cell->visited = true;
             stack.push_back(chosen_cell);
             chosen_cell->heat = 255;
+            cell->update_draw = true;
             if (EqualCell(chosen_cell, end_cell))
             {
                 find = true;
@@ -292,6 +308,7 @@ void Maze::Resolve_Depth_Async(void)
         for (int i = 0; i < stack.size(); i++)
         {
             Cell *cell = stack[i];
+            cell->update_draw = true;
             if (EqualCell(cell, start_cell))
                 (cell)->type = TYPE_START;
             else if (EqualCell(cell, end_cell))
@@ -324,6 +341,7 @@ void Maze::Resolve_Amplitude_Async(void)
                 chosen_cell->visited = true;
                 stack.push_back(chosen_cell);
                 chosen_cell->heat = 255;
+                chosen_cell->update_draw = true;
                 if (EqualCell(chosen_cell, end_cell))
                 {
                     find = true;
@@ -344,6 +362,7 @@ void Maze::Resolve_Amplitude_Async(void)
             else
                 cell->type = TYPE_PATH;
 
+            chosen_cell->update_draw = true;
             chosen_cell = GetNeighbour(cell->x, cell->y, cell->path_dir);
             if (chosen_cell == NULL)
                 break;
@@ -401,6 +420,13 @@ void Maze::Rebuild(int sizeX_, int sizeY_)
 {
     sizeX = sizeX_;
     sizeY = sizeY_;
+    if (IsRenderTextureReady(maze_texture))
+    {
+        UnloadRenderTexture(maze_texture);
+    }
+
+    maze_texture = LoadRenderTexture(sizeX * SIZE_BLOCK, sizeY * SIZE_BLOCK);
+    maze_texture_source = (Rectangle){0, 0, (float)sizeX * SIZE_BLOCK, (float)-sizeY * SIZE_BLOCK};
     data.clear();
     data.resize(sizeX * sizeY);
     start_cell = NULL;
@@ -415,6 +441,7 @@ void Maze::Rebuild(int sizeX_, int sizeY_)
             cell = GetCell(x, y);
             cell->x = x;
             cell->y = y;
+            cell->update_draw = true;
         }
     }
 
@@ -460,69 +487,107 @@ void Maze::Logic(void)
     }
 }
 
+void Maze::Draw_cell(Cell *cell)
+{
+    int x_pos, y_pos, icon_id;
+    x_pos = cell->x * SIZE_BLOCK;
+    y_pos = cell->y * SIZE_BLOCK;
+
+    // Draw cell background
+    DrawRectangle(x_pos, y_pos, SIZE_BLOCK, SIZE_BLOCK, WHITE);
+    if (cell->type == TYPE_START)
+    {
+        DrawRectangle(x_pos, y_pos, SIZE_BLOCK, SIZE_BLOCK, GREEN);
+    }
+    if (cell->type == TYPE_END)
+    {
+        DrawRectangle(x_pos, y_pos, SIZE_BLOCK, SIZE_BLOCK, BLUE);
+    }
+    if (cell->type == TYPE_PATH)
+    {
+        DrawRectangle(x_pos, y_pos, SIZE_BLOCK, SIZE_BLOCK, (Color){0, 255, 255, 255});
+
+        switch (OpositeDir(cell->path_dir))
+        {
+        case DIR_RIGHT:
+            icon_id = ICON_ARROW_RIGHT_FILL;
+            DrawPixel(x_pos, y_pos + (SIZE_BLOCK / 2) - 1, DARKBLUE);
+            DrawPixel(x_pos, y_pos + (SIZE_BLOCK / 2) + 1, DARKBLUE);
+            DrawPixel(x_pos, y_pos + (SIZE_BLOCK / 2), DARKBLUE);
+            DrawPixel(x_pos + 1, y_pos + (SIZE_BLOCK / 2), DARKBLUE);
+
+            break;
+        case DIR_LEFT:
+            icon_id = ICON_ARROW_LEFT_FILL;
+            DrawPixel(x_pos + SIZE_BLOCK - 1, y_pos + (SIZE_BLOCK / 2) - 1, DARKBLUE);
+            DrawPixel(x_pos + SIZE_BLOCK - 1, y_pos + (SIZE_BLOCK / 2) + 1, DARKBLUE);
+            DrawPixel(x_pos + SIZE_BLOCK - 1, y_pos + (SIZE_BLOCK / 2), DARKBLUE);
+            DrawPixel(x_pos + SIZE_BLOCK - 2, y_pos + (SIZE_BLOCK / 2), DARKBLUE);
+            break;
+        case DIR_UP:
+            icon_id = ICON_ARROW_UP_FILL;
+            DrawPixel(x_pos + (SIZE_BLOCK / 2), y_pos + SIZE_BLOCK - 1, DARKBLUE);
+            DrawPixel(x_pos + (SIZE_BLOCK / 2) - 1, y_pos + SIZE_BLOCK - 1, DARKBLUE);
+            DrawPixel(x_pos + (SIZE_BLOCK / 2) + 1, y_pos + SIZE_BLOCK - 1, DARKBLUE);
+            DrawPixel(x_pos + (SIZE_BLOCK / 2), y_pos + SIZE_BLOCK - 2, DARKBLUE);
+            break;
+        case DIR_DOWN:
+            icon_id = ICON_ARROW_DOWN_FILL;
+            DrawPixel(x_pos + (SIZE_BLOCK / 2), y_pos, DARKBLUE);
+            DrawPixel(x_pos + (SIZE_BLOCK / 2) - 1, y_pos, DARKBLUE);
+            DrawPixel(x_pos + (SIZE_BLOCK / 2) + 1, y_pos, DARKBLUE);
+            DrawPixel(x_pos + (SIZE_BLOCK / 2), y_pos + 1, DARKBLUE);
+            break;
+
+        default:
+            icon_id = -1;
+            break;
+        }
+        // if (icon_id != -1)
+        DrawPixel(x_pos + (SIZE_BLOCK / 2), y_pos + (SIZE_BLOCK / 2), DARKBLUE);
+        // GuiDrawIcon(icon_id, x_pos, y_pos, 1, BLACK);
+    }
+    if (cell->heat > async_vel * 1000)
+    {
+        cell->heat -= async_vel * 1000;
+        if (cell->heat < 10)
+        {
+            cell->heat = 0;
+        }
+        DrawRectangle(x_pos, y_pos, SIZE_BLOCK, SIZE_BLOCK, (Color){255, 0, 0, cell->heat});
+    }
+    // Draw cell borders
+    if (cell->neighbours[DIR_UP] == false)
+        DrawRectangle(x_pos, y_pos, SIZE_BLOCK + SIZE_BLOCK_BORDER, SIZE_BLOCK_BORDER, BLACK);
+
+    if (cell->neighbours[DIR_LEFT] == false)
+        DrawRectangle(x_pos, y_pos, SIZE_BLOCK_BORDER, SIZE_BLOCK + SIZE_BLOCK_BORDER, BLACK);
+}
+
 void Maze::Draw(void)
 {
-    BeginMode2D(camera);
-    // Draw cell background
-    Cell *cell;
-    int x_pos, y_pos, icon_id;
-    DrawRectangle(0, 0, sizeX * SIZE_BLOCK, sizeY * SIZE_BLOCK, WHITE);
-    for (int x = 0; x < sizeX; x++)
+    BeginTextureMode(maze_texture);
     {
-        for (int y = 0; y < sizeY; y++)
+        Cell *cell;
+        for (int x = 0; x < sizeX; x++)
         {
-            cell = GetCell(x, y);
-            x_pos = x * SIZE_BLOCK;
-            y_pos = y * SIZE_BLOCK;
-
-            if (cell->type == TYPE_PATH)
+            for (int y = 0; y < sizeY; y++)
             {
-                DrawRectangle(x_pos, y_pos, SIZE_BLOCK, SIZE_BLOCK, (Color){0, 255, 255, 200});
-
-                switch (OpositeDir(cell->path_dir))
+                cell = GetCell(x, y);
+                if (cell->update_draw || cell->heat > 0)
                 {
-                case DIR_RIGHT:
-                    icon_id = ICON_ARROW_RIGHT_FILL;
-                    break;
-                case DIR_LEFT:
-                    icon_id = ICON_ARROW_LEFT_FILL;
-                    break;
-                case DIR_UP:
-                    icon_id = ICON_ARROW_UP_FILL;
-                    break;
-                case DIR_DOWN:
-                    icon_id = ICON_ARROW_DOWN_FILL;
-                    break;
-
-                default:
-                    icon_id = -1;
-                    break;
+                    cell->update_draw = false;
+                    Draw_cell(cell);
                 }
-                if (icon_id != -1)
-                    GuiDrawIcon(icon_id, x_pos, y_pos, 1, BLACK);
             }
-            if (cell->type == TYPE_START)
-            {
-                DrawRectangle(x_pos, y_pos, SIZE_BLOCK, SIZE_BLOCK, (Color){0, 255, 0, 200});
-            }
-            if (cell->type == TYPE_END)
-            {
-                DrawRectangle(x_pos, y_pos, SIZE_BLOCK, SIZE_BLOCK, (Color){0, 0, 255, 200});
-            }
-            if (cell->heat > async_vel * 1000)
-            {
-                DrawRectangle(x_pos, y_pos, SIZE_BLOCK, SIZE_BLOCK, (Color){255, 0, 0, cell->heat});
-                cell->heat -= async_vel * 1000;
-            }
-            // Draw cell borders
-            if (cell->neighbours[DIR_UP] == false)
-                DrawRectangle(x_pos, y_pos, SIZE_BLOCK + SIZE_BLOCK_BORDER, SIZE_BLOCK_BORDER, BLACK);
-
-            if (cell->neighbours[DIR_LEFT] == false)
-                DrawRectangle(x_pos, y_pos, SIZE_BLOCK_BORDER, SIZE_BLOCK + SIZE_BLOCK_BORDER, BLACK);
         }
     }
-
+    EndTextureMode();
+    BeginMode2D(camera);
+    {
+        DrawTexture(maze_texture.texture, 0, 0, WHITE);
+        DrawTextureRec(maze_texture.texture, maze_texture_source, (Vector2){0, 0}, WHITE);
+    }
     EndMode2D();
 }
 
@@ -531,4 +596,5 @@ Maze::~Maze(void)
     DEBUG_MSG("Unload maze");
     sizeX = 0;
     sizeY = 0;
+    UnloadRenderTexture(maze_texture);
 }
